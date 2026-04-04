@@ -1,15 +1,16 @@
 export function toUserResponseDto(user) {
     return {
-        id: user._id,
+        _id: user._id.toString(),
         userName: user.userName,
         userSurname: user.userSurname,
         email: user.email,
-        phoneNumber: user.phoneNumber,
+        phoneNumber: user.phoneNumber || "",
         role: user.role,
         isActive: user.isActive,
-        avatarUrl: user.avatarUrl,
+        avatarUrl: user.avatarUrl || "",
         emailVerified: user.emailVerified,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
+        verificationAttempts: user.verificationAttempts || 0,
+        createdAt: user.createdAt ? user.createdAt.toISOString() : null,
+        updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null,
     };
 }

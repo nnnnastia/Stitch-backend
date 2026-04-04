@@ -1,11 +1,16 @@
 import dotenv from "dotenv";
 dotenv.config();
-
+import jwt from "jsonwebtoken";
+import User from "./users/entities/user.model.js";
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import path from "path";
+
 import { fileURLToPath } from "url";
 
+import { ApolloServer } from "@apollo/server";
+import { expressMiddleware } from "@as-integrations/express5";
 import { connectDB } from "./config/db.js";
 
 import authRoutes from "./auth/auth.routes.js";
@@ -16,12 +21,22 @@ import categoriesRoutes from "./categories/categories.routes.js";
 import recommendationsRoutes from "./recommendations/recommendations.routes.js";
 import sellerProfilesRoutes from "./sellerProfile/sellerProfiles.routes.js";
 
+import categoryTypeDefs from "./categories/graphql/category.typeDefs.js";
+import categoryResolvers from "./categories/category.resolvers.js";
 
+import userTypeDefs from "./users/graphql/user.typeDefs.js";
+import userResolvers from "./users/user.resolvers.js";
 
 const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN, credentials: true, }));
+app.use(cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+}));
+
 app.use(express.json());
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,12 +53,74 @@ app.use("/api/seller/products", sellerProductsRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/recommendations", recommendationsRoutes);
 
+const apolloServer = new ApolloServer({
+    typeDefs: [categoryTypeDefs, userTypeDefs,],
+    resolvers: [categoryResolvers, userResolvers],
+});
+
 const PORT = process.env.PORT || 5000;
 
 async function start() {
     await connectDB(process.env.MONGO_URI);
+
+    await apolloServer.start();
+
+    app.use(
+        "/graphql",
+        expressMiddleware(apolloServer, {
+            context: async ({ req }) => {
+                try {
+                    let token = null;
+
+                    const header = req.headers.authorization || "";
+                    if (header.startsWith("Bearer ")) {
+                        token = header.slice(7);
+                    }
+
+                    if (!token && req.cookies?.accessToken) {
+                        token = req.cookies.accessToken;
+                    }
+
+                    if (!token) {
+                        return { user: null };
+                    }
+
+                    const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+
+                    const user = await User.findById(payload.sub).select("_id email role");
+
+                    return {
+                        user: user || null,
+                    };
+                } catch (error) {
+                    return { user: null };
+                }
+            },
+        })
+    );
+
+    // 404 handler
+    app.use((req, res) => {
+        res.status(404).json({
+            message: "Route not found",
+        });
+    });
+
+    // global error handler
+    app.use((err, req, res, next) => {
+        console.error(err);
+
+        const status = err.status || 500;
+        const message = err.message || "Internal server error";
+
+        res.status(status).json({
+            message,
+        });
+    });
+
     app.listen(PORT, () => {
         console.log(`✅ Server running: http://localhost:${PORT}`);
+        console.log(`✅ GraphQL ready: http://localhost:${PORT}/graphql`);
     });
 }
 

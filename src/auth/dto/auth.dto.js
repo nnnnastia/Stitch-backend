@@ -14,9 +14,9 @@ export function toAuthUserDto(user) {
     };
 }
 
-export function toAuthResponseDto(user, token) {
+export function toAuthResponseDto(user, accessToken) {
     return {
-        token,
+        accessToken,
         user: toAuthUserDto(user),
     };
 }

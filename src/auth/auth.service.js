@@ -3,18 +3,23 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 
 import * as authRepository from "./auth.repository.js";
-import { toAuthResponseDto, toAuthUserDto } from "./dto/auth.dto.js";
+import * as tokenRepository from "./tokens/token.repository.js";
+import { toAuthUserDto } from "./dto/auth.dto.js";
 import { sendVerificationEmail } from "../mail/mail.service.js"
 
-function createJwtToken(user) {
+function createAccessToken(user) {
     return jwt.sign(
         {
-            id: user._id,
+            sub: user._id.toString(),
             role: user.role,
         },
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" }
+        process.env.JWT_ACCESS_SECRET,
+        { expiresIn: "15m" }
     );
+}
+
+function createRefreshToken() {
+    return crypto.randomBytes(64).toString("hex");
 }
 
 function generateVerificationToken() {
@@ -67,16 +72,16 @@ export async function register(body) {
 
     await sendVerificationEmail(user.email, verificationLink);
 
-    const token = createJwtToken(user);
-
-    return toAuthResponseDto(user, token);
+    return {
+        message: "Registration successful. Please verify your email.",
+        user: toAuthUserDto(user),
+    };
 }
 
-export async function login(body) {
+export async function login(body, meta) {
     const { email, password } = body;
 
     const normalizedEmail = email.trim().toLowerCase();
-
     const user = await authRepository.findByEmailWithPassword(normalizedEmail);
 
     if (!user) {
@@ -91,6 +96,12 @@ export async function login(body) {
         throw error;
     }
 
+    if (!user.emailVerified) {
+        const error = new Error("Email is not verified");
+        error.status = 403;
+        throw error;
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isPasswordValid) {
@@ -99,9 +110,22 @@ export async function login(body) {
         throw error;
     }
 
-    const token = createJwtToken(user);
+    const accessToken = createAccessToken(user);
+    const refreshToken = createRefreshToken();
 
-    return toAuthResponseDto(user, token);
+    await tokenRepository.createRefreshSession({
+        userId: user._id,
+        rawToken: refreshToken,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+        userAgent: meta.userAgent,
+        ip: meta.ip,
+    });
+
+    return {
+        accessToken,
+        refreshToken,
+        user: toAuthUserDto(user),
+    };
 }
 
 export async function verifyEmail(query) {
@@ -128,4 +152,53 @@ export async function verifyEmail(query) {
     });
 
     return toAuthUserDto(updatedUser);
+}
+
+export async function refresh(refreshToken) {
+    if (!refreshToken) {
+        const error = new Error("Refresh token is required");
+        error.status = 401;
+        throw error;
+    }
+
+    const session = await authRepository.findRefreshSession(refreshToken);
+
+    if (!session) {
+        const error = new Error("Invalid or expired refresh token");
+        error.status = 401;
+        throw error;
+    }
+
+    const user = await authRepository.findUserById(session.user);
+
+    if (!user || !user.isActive) {
+        const error = new Error("User is not available");
+        error.status = 401;
+        throw error;
+    }
+
+    const newAccessToken = createAccessToken(user);
+    const newRefreshToken = createRefreshToken();
+
+    await authRepository.revokeRefreshSessionByToken(refreshToken);
+
+    await tokenRepository.createRefreshSession({
+        userId: user._id,
+        rawToken: newRefreshToken,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+    });
+
+    return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        user: toAuthUserDto(user),
+    };
+}
+
+export async function logout(refreshToken) {
+    if (refreshToken) {
+        await authRepository.revokeRefreshSessionByToken(refreshToken);
+    }
+
+    return { message: "Logged out succesfully" };
 }
