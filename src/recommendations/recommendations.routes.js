@@ -1,9 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
-import {
-    trackView,
-    getMyRecommendations
-} from "./recommendations.controller.js";
+import { trackView, getMyRecommendations } from "./recommendations.controller.js";
 
 const router = Router();
 

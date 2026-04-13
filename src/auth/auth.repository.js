@@ -31,3 +31,7 @@ export async function updateById(userId, updateData) {
         runValidators: true,
     });
 }
+
+export async function findUserById(userId) {
+    return User.findById(userId);
+}

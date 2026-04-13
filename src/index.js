@@ -20,7 +20,7 @@ import sellerProductsRoutes from "./sellerProducts/sellerProducts.routes.js";
 import categoriesRoutes from "./categories/categories.routes.js";
 import recommendationsRoutes from "./recommendations/recommendations.routes.js";
 import sellerProfilesRoutes from "./sellerProfile/sellerProfiles.routes.js";
-
+import cartRoutes from "./cart/cart.routes.js";
 import categoryTypeDefs from "./categories/graphql/category.typeDefs.js";
 import categoryResolvers from "./categories/category.resolvers.js";
 
@@ -47,6 +47,7 @@ app.get("/api/health", (req, res) => res.json({ ok: true }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/cart", cartRoutes);
 app.use("/api/products", productsRoutes);
 app.use("/api/seller/profile", sellerProfilesRoutes);
 app.use("/api/seller/products", sellerProductsRoutes);

@@ -52,8 +52,8 @@ const sellerProfileSchema = new mongoose.Schema(
 
         status: {
             type: String,
-            enum: ["pending", "active", "blocked"],
-            default: "pending"
+            enum: ["active", "blocked"],
+            default: "active"
         },
 
         rating: {

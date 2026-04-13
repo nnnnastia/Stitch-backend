@@ -29,7 +29,16 @@ router.post(
 
 router.get("/:id", requireAuth, requireSeller, getMyProductById);
 
-router.put("/:id", requireAuth, requireSeller, updateMyProduct);
+router.patch(
+    "/:id",
+    requireAuth,
+    requireSeller,
+    upload.fields([
+        { name: "coverImage", maxCount: 1 },
+        { name: "images", maxCount: 8 },
+    ]),
+    updateMyProduct
+);
 
 router.delete("/:id", requireAuth, requireSeller, deleteMyProduct);
 

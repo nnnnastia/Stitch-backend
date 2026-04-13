@@ -15,3 +15,19 @@ export async function updateByUserId(userId, updateData) {
         { new: true, runValidators: true }
     );
 }
+export async function createIfNotExists(userId) {
+    const existingProfile = await SellerProfile.findOne({ user: userId });
+
+    if (existingProfile) {
+        return existingProfile;
+    }
+
+    return SellerProfile.create({
+        user: userId,
+        displayName: "",
+        about: "",
+        contacts: {},
+        delivery: {},
+        payment: {},
+    });
+}

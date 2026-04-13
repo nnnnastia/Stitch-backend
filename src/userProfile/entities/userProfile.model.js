@@ -12,8 +12,15 @@ const userProfileSchema = new mongoose.Schema(
 
         recentlyViewed: [
             {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Product"
+                product: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "Product",
+                    required: true
+                },
+                viewedAt: {
+                    type: Date,
+                    default: Date.now
+                }
             }
         ],
 

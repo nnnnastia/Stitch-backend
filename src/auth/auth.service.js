@@ -4,8 +4,9 @@ import crypto from "crypto";
 
 import * as authRepository from "./auth.repository.js";
 import * as tokenRepository from "./tokens/token.repository.js";
+import * as sellerProfilesRepository from "../sellerProfile/sellerProfiles.repository.js";
 import { toAuthUserDto } from "./dto/auth.dto.js";
-import { sendVerificationEmail } from "../mail/mail.service.js"
+import { sendVerificationEmail } from "../mail/mail.service.js";
 
 function createAccessToken(user) {
     return jwt.sign(
@@ -39,6 +40,7 @@ export async function register(body) {
         email,
         password,
         phoneNumber,
+        role,
     } = body;
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -56,17 +58,24 @@ export async function register(body) {
     const { rawToken, tokenHash } = generateVerificationToken();
     const verificationExpires = new Date(Date.now() + 1000 * 60 * 60 * 24);
 
+    const normalizedRole = role === "seller" ? "seller" : "user";
+
     const user = await authRepository.createUser({
         userName: userName.trim(),
         userSurname: userSurname.trim(),
         email: normalizedEmail,
         passwordHash,
         phoneNumber: phoneNumber ? phoneNumber.trim() : undefined,
+        role: normalizedRole,
         verificationTokenHash: tokenHash,
         verificationTokenExpires: verificationExpires,
         verificationSentAt: new Date(),
         verificationAttempts: 1,
     });
+
+    if (normalizedRole === "seller") {
+        await sellerProfilesRepository.createIfNotExists(user._id);
+    }
 
     const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${rawToken}`;
 
@@ -161,7 +170,7 @@ export async function refresh(refreshToken) {
         throw error;
     }
 
-    const session = await authRepository.findRefreshSession(refreshToken);
+    const session = await tokenRepository.findRefreshSession(refreshToken);
 
     if (!session) {
         const error = new Error("Invalid or expired refresh token");
@@ -180,7 +189,7 @@ export async function refresh(refreshToken) {
     const newAccessToken = createAccessToken(user);
     const newRefreshToken = createRefreshToken();
 
-    await authRepository.revokeRefreshSessionByToken(refreshToken);
+    await tokenRepository.revokeRefreshSessionByToken(refreshToken);
 
     await tokenRepository.createRefreshSession({
         userId: user._id,
@@ -197,8 +206,8 @@ export async function refresh(refreshToken) {
 
 export async function logout(refreshToken) {
     if (refreshToken) {
-        await authRepository.revokeRefreshSessionByToken(refreshToken);
+        await tokenRepository.revokeRefreshSessionByToken(refreshToken);
     }
 
-    return { message: "Logged out succesfully" };
+    return { message: "Logged out successfully" };
 }
