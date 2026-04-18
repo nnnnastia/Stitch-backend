@@ -16,7 +16,9 @@ function updatePricePreference(profile, price) {
     }
 }
 
+
 export async function trackProductView(userId, productId) {
+
     const profile = await ensureUserProfile(userId);
 
     const product = await Product.findById(productId).lean();
@@ -24,10 +26,24 @@ export async function trackProductView(userId, productId) {
         throw new Error("Product not found");
     }
 
-    const currentViewed = (profile.recentlyViewed || []).map(id => id.toString());
-    const cleanViewed = currentViewed.filter(id => id !== productId.toString());
+    console.log("TRACK PRODUCT VIEW NEW FILE WORKS", { userId, productId });
 
-    profile.recentlyViewed = [productId, ...cleanViewed].slice(0, 20);
+    const currentViewed = (profile.recentlyViewed || []).map((item) => ({
+        product: item.product.toString(),
+        viewedAt: item.viewedAt,
+    }));
+
+    const cleanViewed = currentViewed.filter(
+        (item) => item.product !== productId.toString()
+    );
+
+    profile.recentlyViewed = [
+        {
+            product: productId,
+            viewedAt: new Date(),
+        },
+        ...cleanViewed,
+    ].slice(0, 20);
 
     if (product.categoryId) {
         const categoryKey = product.categoryId.toString();
@@ -58,14 +74,14 @@ export async function getRecommendedProducts(userId, limit = 8) {
     const profile = await ensureUserProfile(userId);
 
     const viewedIds = new Set(
-        (profile.recentlyViewed || []).map(id => id.toString())
+        (profile.recentlyViewed || []).map((item) => item.product.toString())
     );
 
-    const products = await Product.find({ isActive: true }).lean();
+    const products = await Product.find({}).lean();
 
     const scoredProducts = products
-        .filter(product => !viewedIds.has(product._id.toString()))
-        .map(product => {
+        .filter((product) => !viewedIds.has(product._id.toString()))
+        .map((product) => {
             let score = 0;
 
             if (product.categoryId) {
@@ -92,10 +108,10 @@ export async function getRecommendedProducts(userId, limit = 8) {
 
             return {
                 ...product,
-                recommendationScore: score
+                recommendationScore: score,
             };
         })
-        .filter(product => product.recommendationScore > 0)
+        .filter((product) => product.recommendationScore > 0)
         .sort((a, b) => b.recommendationScore - a.recommendationScore)
         .slice(0, limit);
 
@@ -103,7 +119,7 @@ export async function getRecommendedProducts(userId, limit = 8) {
         return scoredProducts;
     }
 
-    return Product.find({ isActive: true })
+    return Product.find({})
         .sort({ createdAt: -1 })
         .limit(limit)
         .lean();

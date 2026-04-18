@@ -23,7 +23,7 @@ import sellerProfilesRoutes from "./sellerProfile/sellerProfiles.routes.js";
 import cartRoutes from "./cart/cart.routes.js";
 import categoryTypeDefs from "./categories/graphql/category.typeDefs.js";
 import categoryResolvers from "./categories/category.resolvers.js";
-
+import searchRoutes from "./search/search.routes.js";
 import userTypeDefs from "./users/graphql/user.typeDefs.js";
 import userResolvers from "./users/user.resolvers.js";
 
@@ -53,6 +53,7 @@ app.use("/api/seller/profile", sellerProfilesRoutes);
 app.use("/api/seller/products", sellerProductsRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/recommendations", recommendationsRoutes);
+app.use("/api/search", searchRoutes);
 
 const apolloServer = new ApolloServer({
     typeDefs: [categoryTypeDefs, userTypeDefs,],
