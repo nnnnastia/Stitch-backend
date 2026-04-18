@@ -26,6 +26,12 @@ import categoryResolvers from "./categories/category.resolvers.js";
 import searchRoutes from "./search/search.routes.js";
 import userTypeDefs from "./users/graphql/user.typeDefs.js";
 import userResolvers from "./users/user.resolvers.js";
+import ordersRoutes from "./orders/orders.routes.js";
+import shippingRoutes from "./shipping/shipping.routes.js";
+import { ordersTypeDefs } from "./orders/graphql/orders.typeDefs.js";
+import { ordersResolvers } from "./orders/orders.resolvers.js";
+import baseTypeDefs from "./graphql/base.typeDefs.js";
+import sellerOrdersRoutes from "./sellerOrders/sellerOrders.routes.js";
 
 const app = express();
 
@@ -51,13 +57,16 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/products", productsRoutes);
 app.use("/api/seller/profile", sellerProfilesRoutes);
 app.use("/api/seller/products", sellerProductsRoutes);
+app.use("/api/seller/orders", sellerOrdersRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/recommendations", recommendationsRoutes);
 app.use("/api/search", searchRoutes);
+app.use("/api/orders", ordersRoutes);
+app.use("/api/shipping", shippingRoutes);
 
 const apolloServer = new ApolloServer({
-    typeDefs: [categoryTypeDefs, userTypeDefs,],
-    resolvers: [categoryResolvers, userResolvers],
+    typeDefs: [baseTypeDefs, categoryTypeDefs, userTypeDefs, ordersTypeDefs],
+    resolvers: [categoryResolvers, userResolvers, ordersResolvers],
 });
 
 const PORT = process.env.PORT || 5000;
