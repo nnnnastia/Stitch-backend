@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import * as usersRepository from "./users.repository.js";
+import { uploadBufferToCloudinary, deleteFromCloudinary } from "../utils/cloudinaryUpload.js";
 import { toUserResponseDto } from "./dto/users.dto.js";
 import * as tokenRepository from "../auth/tokens/token.repository.js";
 
@@ -106,17 +107,29 @@ export async function updateMyAvatar(userId, file) {
         throw error;
     }
 
-    const avatarUrl = `/uploads/${file.filename}`;
+    const user = await usersRepository.findById(userId);
 
-    const updatedUser = await usersRepository.updateById(userId, {
-        avatarUrl,
-    });
-
-    if (!updatedUser) {
+    if (!user) {
         const error = new Error("Користувача не знайдено");
         error.status = 404;
         throw error;
     }
+
+    if (user.avatarPublicId) {
+        await deleteFromCloudinary(user.avatarPublicId);
+    }
+
+    const uploadedAvatar = await uploadBufferToCloudinary(file.buffer, {
+        folder: "marketplace/avatars",
+        transformation: [
+            { width: 400, height: 400, crop: "fill", gravity: "face" },
+        ],
+    });
+
+    const updatedUser = await usersRepository.updateById(userId, {
+        avatarUrl: uploadedAvatar.secure_url,
+        avatarPublicId: uploadedAvatar.public_id,
+    });
 
     return toUserResponseDto(updatedUser);
 }

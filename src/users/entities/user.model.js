@@ -40,6 +40,10 @@ const userSchema = new mongoose.Schema(
             type: String,
             default: ""
         },
+        avatarPublicId: {
+            type: String,
+            default: ""
+        },
         emailVerified: {
             type: Boolean,
             default: false

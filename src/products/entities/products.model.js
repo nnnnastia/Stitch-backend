@@ -5,53 +5,57 @@ const productSchema = new mongoose.Schema(
         title: {
             type: String,
             required: true,
-            trim: true
+            trim: true,
         },
         price: {
             type: Number,
             required: true,
-            min: 0
+            min: 0,
         },
         currency: {
             type: String,
             enum: ["UAH", "USD", "EUR"],
-            default: "UAH"
+            default: "UAH",
         },
         coverImage: {
             type: String,
             required: true,
-
+        },
+        coverImagePublicId: {
+            type: String,
+            required: true,
         },
         images: {
             type: [String],
-            default: []
+            default: [],
+        },
+        imagePublicIds: {
+            type: [String],
+            default: [],
         },
         badges: {
             type: [String],
             enum: ["Новинка", "Розпродаж", "Хіт"],
-            default: []
+            default: [],
         },
         categoryId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Category",
             required: true,
-            index: true
+            index: true,
         },
         description: {
             type: String,
-            default: ""
+            default: "",
         },
         seller: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true,
-            index: true
-        }
-
+            index: true,
+        },
     },
     { timestamps: true }
 );
 
 export default mongoose.model("Product", productSchema);
-
-

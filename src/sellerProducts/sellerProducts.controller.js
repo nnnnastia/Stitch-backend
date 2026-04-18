@@ -42,7 +42,8 @@ export async function updateMyProduct(req, res, next) {
         const product = await sellerProductsService.updateMyProduct(
             req.user._id,
             req.params.id,
-            req.body
+            req.body,
+            req.files
         );
 
         return res.status(200).json(product);

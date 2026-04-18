@@ -8,6 +8,7 @@ import {
     normalizeBadges,
     normalizeImages,
 } from "./sellerProducts.utils.js";
+import { uploadBufferToCloudinary } from "../utils/cloudinaryUpload.js";
 import {
     toSellerProductDto,
     toSellerProductsListDto,
@@ -57,16 +58,29 @@ export async function createMyProduct(userId, sellerProfile, body, files) {
         throw error;
     }
 
-    const coverImage = `/uploads/${coverFile.filename}`;
+    const uploadedCover = await uploadBufferToCloudinary(coverFile.buffer, {
+        folder: "marketplace/products/covers",
+        transformation: [{ width: 1200, height: 1200, crop: "limit" }],
+    });
+
     const imagesFiles = files?.images || [];
-    const images = imagesFiles.map((f) => `/uploads/${f.filename}`);
+    const uploadedImages = await Promise.all(
+        imagesFiles.map((file) =>
+            uploadBufferToCloudinary(file.buffer, {
+                folder: "marketplace/products/gallery",
+                transformation: [{ width: 1200, height: 1200, crop: "limit" }],
+            })
+        )
+    );
 
     const product = await sellerProductsRepository.createProduct({
         title,
         price,
         currency,
-        coverImage,
-        images,
+        coverImage: uploadedCover.secure_url,
+        coverImagePublicId: uploadedCover.public_id,
+        images: uploadedImages.map((item) => item.secure_url),
+        imagePublicIds: uploadedImages.map((item) => item.public_id),
         badges,
         categoryId,
         description: body.description ? String(body.description) : "",
@@ -94,72 +108,94 @@ export async function getMyProductById(userId, productId) {
     return toSellerProductDto(product);
 }
 
-export async function updateMyProduct(userId, productId, body) {
+export async function updateMyProduct(userId, productId, body, files) {
     if (!isValidObjectId(productId)) {
         const error = new Error("Invalid id");
         error.status = 400;
         throw error;
     }
 
-    const allowedFields = [
-        "title",
-        "price",
-        "currency",
-        "coverImage",
-        "images",
-        "badges",
-        "categoryId",
-        "description",
-    ];
+    const existingProduct = await sellerProductsRepository.findOneBySellerAndId(
+        productId,
+        userId
+    );
+
+    if (!existingProduct) {
+        const error = new Error("Not found");
+        error.status = 404;
+        throw error;
+    }
 
     const patch = {};
 
-    for (const key of allowedFields) {
-        if (body[key] !== undefined) {
-            patch[key] = body[key];
-        }
+    if (body.title !== undefined) {
+        patch.title = normalizeTitle(body.title);
     }
 
-    if (patch.title !== undefined) {
-        if (!String(patch.title).trim()) {
-            const error = new Error("Title can't be empty");
-            error.status = 400;
-            throw error;
-        }
-        patch.title = String(patch.title).trim();
+    if (body.price !== undefined) {
+        patch.price = normalizePrice(body.price);
     }
 
-    if (patch.price !== undefined) {
-        patch.price = normalizePrice(patch.price);
-    }
-
-    if (patch.currency !== undefined) {
-        if (!ALLOWED_CURRENCY.includes(patch.currency)) {
+    if (body.currency !== undefined) {
+        if (!ALLOWED_CURRENCY.includes(body.currency)) {
             const error = new Error("Invalid currency");
             error.status = 400;
             throw error;
         }
+        patch.currency = body.currency;
     }
 
-    if (patch.categoryId !== undefined) {
-        validateCategoryId(patch.categoryId);
+    if (body.categoryId !== undefined) {
+        patch.categoryId = validateCategoryId(body.categoryId);
     }
 
-    if (patch.coverImage !== undefined) {
-        if (!String(patch.coverImage).trim()) {
-            const error = new Error("coverImage can't be empty");
-            error.status = 400;
-            throw error;
+    if (body.badges !== undefined) {
+        patch.badges = normalizeBadges(body.badges);
+    }
+
+    if (body.description !== undefined) {
+        patch.description = String(body.description || "");
+    }
+
+    const coverFile = files?.coverImage?.[0];
+    if (coverFile) {
+        if (existingProduct.coverImagePublicId) {
+            await deleteFromCloudinary(existingProduct.coverImagePublicId);
         }
-        patch.coverImage = String(patch.coverImage).trim();
+
+        const uploadedCover = await uploadBufferToCloudinary(coverFile.buffer, {
+            folder: "marketplace/products/covers",
+            transformation: [{ width: 1200, height: 1200, crop: "limit" }],
+        });
+
+        patch.coverImage = uploadedCover.secure_url;
+        patch.coverImagePublicId = uploadedCover.public_id;
     }
 
-    if (patch.images !== undefined) {
-        patch.images = normalizeImages(patch.images);
-    }
+    const imageFiles = files?.images || [];
+    if (imageFiles.length > 0) {
+        if (
+            Array.isArray(existingProduct.imagePublicIds) &&
+            existingProduct.imagePublicIds.length
+        ) {
+            await Promise.all(
+                existingProduct.imagePublicIds.map((publicId) =>
+                    deleteFromCloudinary(publicId)
+                )
+            );
+        }
 
-    if (patch.badges !== undefined) {
-        patch.badges = normalizeBadges(patch.badges);
+        const uploadedImages = await Promise.all(
+            imageFiles.map((file) =>
+                uploadBufferToCloudinary(file.buffer, {
+                    folder: "marketplace/products/gallery",
+                    transformation: [{ width: 1200, height: 1200, crop: "limit" }],
+                })
+            )
+        );
+
+        patch.images = uploadedImages.map((item) => item.secure_url);
+        patch.imagePublicIds = uploadedImages.map((item) => item.public_id);
     }
 
     const updated = await sellerProductsRepository.updateOneBySellerAndId(
@@ -167,12 +203,6 @@ export async function updateMyProduct(userId, productId, body) {
         userId,
         patch
     );
-
-    if (!updated) {
-        const error = new Error("Not found");
-        error.status = 404;
-        throw error;
-    }
 
     return toSellerProductDto(updated);
 }
@@ -184,13 +214,27 @@ export async function deleteMyProduct(userId, productId) {
         throw error;
     }
 
-    const deleted = await sellerProductsRepository.deleteOneBySellerAndId(productId, userId);
+    const product = await sellerProductsRepository.findOneBySellerAndId(productId, userId);
 
-    if (!deleted) {
+    if (!product) {
         const error = new Error("Not found");
         error.status = 404;
         throw error;
     }
+
+    if (product.coverImagePublicId) {
+        await deleteFromCloudinary(product.coverImagePublicId);
+    }
+
+    if (Array.isArray(product.imagePublicIds) && product.imagePublicIds.length) {
+        await Promise.all(
+            product.imagePublicIds.map((publicId) =>
+                deleteFromCloudinary(publicId)
+            )
+        );
+    }
+
+    await sellerProductsRepository.deleteOneBySellerAndId(productId, userId);
 
     return { ok: true };
 }

@@ -62,7 +62,7 @@ const apolloServer = new ApolloServer({
 const PORT = process.env.PORT || 5000;
 
 async function start() {
-    await connectDB(process.env.MONGO_URI);
+    await connectDB();
 
     await apolloServer.start();
 
