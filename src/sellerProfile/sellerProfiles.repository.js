@@ -35,3 +35,15 @@ export async function findPublicByUserId(userId) {
 export async function findBySlug(slug) {
     return SellerProfile.findOne({ storeSlug: slug });
 }
+export async function createIfNotExists(userId) {
+    let profile = await SellerProfile.findOne({ user: userId });
+
+    if (!profile) {
+        profile = await SellerProfile.create({
+            user: userId,
+            storeSlug: `store-${userId}`,
+        });
+    }
+
+    return profile;
+}

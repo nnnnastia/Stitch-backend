@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema(
         },
         userSurname: {
             type: String,
-            required: true,
+            required: false,
             trim: true
         },
         email: {
@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema(
         },
         passwordHash: {
             type: String,
-            required: true,
+            required: false,
             select: false
         },
         phoneNumber: {
@@ -31,6 +31,11 @@ const userSchema = new mongoose.Schema(
             type: String,
             enum: ["user", "seller", "admin"],
             default: "user"
+        },
+        googleId: {
+            type: String,
+            default: null,
+            index: true,
         },
         isActive: {
             type: Boolean,

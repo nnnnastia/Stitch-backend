@@ -3,6 +3,7 @@ import {
     getRefreshCookieOptions,
 } from "../config/cookie.config.js";
 import * as authService from "./auth.service.js";
+import PendingOAuth from "./entities/pendingOAuth.model.js";
 
 export async function register(req, res, next) {
     try {
@@ -97,6 +98,68 @@ export async function resetPassword(req, res, next) {
     try {
         const result = await authService.resetPassword(req.body);
         return res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function googleLoginCallback(req, res, next) {
+    try {
+        if (!req.user || req.user.mode !== "login") {
+            return res.redirect(`${process.env.FRONTEND_URL}/login`);
+        }
+        if (req.user.mode === "login_not_found") {
+            return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_not_found`);
+        }
+        const result = await authService.loginWithGoogle(req.user.user, {
+            userAgent: req.get("user-agent"),
+            ip: req.ip,
+        });
+
+        res.cookie("accessToken", result.accessToken, getAccessCookieOptions());
+        res.cookie("refreshToken", result.refreshToken, getRefreshCookieOptions());
+
+        return res.redirect(process.env.FRONTEND_URL);
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function googleRegisterCallback(req, res, next) {
+    try {
+        if (!req.user || req.user.mode !== "register") {
+            return res.redirect(`${process.env.FRONTEND_URL}/register`);
+        }
+        if (req.user.mode === "register_exists") {
+            return res.redirect(`${process.env.FRONTEND_URL}/register?error=google_exists`);
+        }
+        const pending = await PendingOAuth.create({
+            ...req.user.googleProfile,
+            expiresAt: new Date(Date.now() + 1000 * 60 * 10),
+        });
+
+        return res.redirect(
+            `${process.env.FRONTEND_URL}/complete-google-signup?token=${pending._id}`
+        );
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function completeGoogleRegistration(req, res, next) {
+    try {
+        const result = await authService.completeGoogleRegistration(req.body, {
+            userAgent: req.get("user-agent"),
+            ip: req.ip,
+        });
+
+        res.cookie("accessToken", result.accessToken, getAccessCookieOptions());
+        res.cookie("refreshToken", result.refreshToken, getRefreshCookieOptions());
+
+        return res.status(201).json({
+            user: result.user,
+            message: "Google registration completed successfully",
+        });
     } catch (error) {
         next(error);
     }

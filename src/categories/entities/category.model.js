@@ -39,7 +39,6 @@ const categorySchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-categorySchema.index({ slug: 1 });
 categorySchema.index({ parent: 1 });
 categorySchema.index({ order: 1 });
 

@@ -6,6 +6,8 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import path from "path";
+import session from "express-session";
+import passport from "./config/passport.js";
 
 import { fileURLToPath } from "url";
 
@@ -44,6 +46,17 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(
+    session({
+        secret: "secret",
+        resave: false,
+        saveUninitialized: false,
+    })
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

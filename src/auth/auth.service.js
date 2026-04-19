@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 
+import PendingOAuth from "./entities/pendingOAuth.model.js";
 import * as authRepository from "./auth.repository.js";
 import * as tokenRepository from "./tokens/token.repository.js";
 import * as sellerProfilesRepository from "../sellerProfile/sellerProfiles.repository.js";
@@ -278,5 +279,98 @@ export async function resetPassword({ token, newPassword, confirmPassword }) {
 
     return {
         message: "Password has been reset successfully",
+    };
+}
+
+export async function loginWithGoogle(user, meta) {
+    if (!user) {
+        const error = new Error("Google user is required");
+        error.status = 401;
+        throw error;
+    }
+
+    if (!user.isActive) {
+        const error = new Error("User account is inactive");
+        error.status = 403;
+        throw error;
+    }
+
+    const accessToken = createAccessToken(user);
+    const refreshToken = createRefreshToken();
+
+    await tokenRepository.createRefreshSession({
+        userId: user._id,
+        rawToken: refreshToken,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+        userAgent: meta.userAgent,
+        ip: meta.ip,
+    });
+
+    return {
+        accessToken,
+        refreshToken,
+        user: toAuthUserDto(user),
+    };
+}
+export async function completeGoogleRegistration(body, meta) {
+    const { token, role } = body;
+
+    if (!token) {
+        const error = new Error("Registration token is required");
+        error.status = 400;
+        throw error;
+    }
+
+    const normalizedRole = role === "seller" ? "seller" : "user";
+
+    const pending = await PendingOAuth.findById(token);
+
+    if (!pending) {
+        const error = new Error("Pending Google registration not found or expired");
+        error.status = 400;
+        throw error;
+    }
+
+    const existingUser = await authRepository.findByEmail(pending.email);
+
+    if (existingUser) {
+        const error = new Error("User with this email already exists");
+        error.status = 409;
+        throw error;
+    }
+
+    const user = await authRepository.createUser({
+        userName: pending.userName || "Google User",
+        userSurname: pending.userSurname || "",
+        email: pending.email,
+        phoneNumber: undefined,
+        role: normalizedRole,
+        emailVerified: true,
+        avatarUrl: pending.avatarUrl || "",
+        googleId: pending.googleId,
+        isActive: true,
+    });
+
+    if (normalizedRole === "seller") {
+        await sellerProfilesRepository.createIfNotExists(user._id);
+    }
+
+    const accessToken = createAccessToken(user);
+    const refreshToken = createRefreshToken();
+
+    await tokenRepository.createRefreshSession({
+        userId: user._id,
+        rawToken: refreshToken,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+        userAgent: meta.userAgent,
+        ip: meta.ip,
+    });
+
+    await PendingOAuth.findByIdAndDelete(pending._id);
+
+    return {
+        accessToken,
+        refreshToken,
+        user: toAuthUserDto(user),
     };
 }
