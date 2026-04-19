@@ -60,6 +60,43 @@ const userSchema = new mongoose.Schema(
         verificationAttempts: {
             type: Number,
             default: 0
+        },
+
+        recentlyViewed: [
+            {
+                product: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "Product",
+                    required: true
+                },
+                viewedAt: {
+                    type: Date,
+                    default: Date.now
+                }
+            }
+        ],
+
+        categoryScores: {
+            type: Map,
+            of: Number,
+            default: {}
+        },
+
+        tagScores: {
+            type: Map,
+            of: Number,
+            default: {}
+        },
+
+        pricePref: {
+            min: {
+                type: Number,
+                default: null
+            },
+            max: {
+                type: Number,
+                default: null
+            }
         }
     },
     {

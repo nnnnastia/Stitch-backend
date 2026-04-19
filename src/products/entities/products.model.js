@@ -54,6 +54,10 @@ const productSchema = new mongoose.Schema(
             required: true,
             index: true,
         },
+        viewsCount: {
+            type: Number,
+            default: 0
+        },
     },
     { timestamps: true }
 );
