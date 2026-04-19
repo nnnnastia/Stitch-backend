@@ -33,6 +33,7 @@ import { ordersResolvers } from "./orders/orders.resolvers.js";
 import baseTypeDefs from "./graphql/base.typeDefs.js";
 import sellerOrdersRoutes from "./sellerOrders/sellerOrders.routes.js";
 import chatRoutes from "./chat/chat.routes.js";
+
 const app = express();
 
 app.use(cors({
@@ -57,6 +58,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/products", productsRoutes);
 app.use("/api/seller/profile", sellerProfilesRoutes);
 app.use("/api/seller/products", sellerProductsRoutes);
+app.use("/api/seller-profiles", sellerProfilesRoutes);
 app.use("/api/seller/orders", sellerOrdersRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/recommendations", recommendationsRoutes);

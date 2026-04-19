@@ -4,13 +4,22 @@ import { requireSeller } from "../middleware/requireSeller.js";
 import {
     createMySellerProfile,
     getMySellerProfile,
-    updateMySellerProfile
+    updateMySellerProfile,
+    getPublicSellerProfileBySlug,
+    getPublicSellerProfileByUserId,
+    getPublicSellerProductsBySlug
 } from "./sellerProfiles.controller.js";
 
 const router = Router();
 
-router.post("/me", requireAuth, createMySellerProfile);
+// private
+router.post("/me", requireAuth, requireSeller, createMySellerProfile);
 router.get("/me", requireAuth, requireSeller, getMySellerProfile);
 router.patch("/me", requireAuth, requireSeller, updateMySellerProfile);
+
+// public
+router.get("/public/slug/:slug", getPublicSellerProfileBySlug);
+router.get("/public/user/:userId", getPublicSellerProfileByUserId);
+router.get("/public/slug/:slug/products", getPublicSellerProductsBySlug);
 
 export default router;

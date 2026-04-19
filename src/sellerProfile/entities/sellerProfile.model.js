@@ -10,12 +10,32 @@ const sellerProfileSchema = new mongoose.Schema(
             index: true
         },
 
-        // як “назва магазину” (може бути ім’я, а може бренд)
         displayName: {
             type: String,
             default: "",
             trim: true,
             maxlength: 60
+        },
+
+        storeSlug: {
+            type: String,
+            default: "",
+            trim: true,
+            lowercase: true,
+            unique: true,
+            sparse: true
+        },
+
+        avatarUrl: {
+            type: String,
+            default: "",
+            trim: true
+        },
+
+        bannerUrl: {
+            type: String,
+            default: "",
+            trim: true
         },
 
         about: {
@@ -25,11 +45,17 @@ const sellerProfileSchema = new mongoose.Schema(
             maxlength: 1500
         },
 
-        // публічні контакти (не обовʼязково дублювати з User)
         contacts: {
             phone: { type: String, default: "", trim: true },
             email: { type: String, default: "", trim: true },
             city: { type: String, default: "", trim: true },
+        },
+
+        socials: {
+            instagram: { type: String, default: "", trim: true },
+            facebook: { type: String, default: "", trim: true },
+            telegram: { type: String, default: "", trim: true },
+            website: { type: String, default: "", trim: true },
         },
 
         delivery: {
@@ -43,9 +69,12 @@ const sellerProfileSchema = new mongoose.Schema(
             cashOnDelivery: { type: Boolean, default: false },
         },
 
-        // виплати (НЕ номер картки)
         payout: {
-            provider: { type: String, enum: ["", "liqpay", "wayforpay", "fondy"], default: "" },
+            provider: {
+                type: String,
+                enum: ["", "liqpay", "wayforpay", "fondy"],
+                default: ""
+            },
             cardLast4: { type: String, default: "", trim: true },
             externalAccountId: { type: String, default: "", trim: true },
         },
@@ -54,6 +83,11 @@ const sellerProfileSchema = new mongoose.Schema(
             type: String,
             enum: ["active", "blocked"],
             default: "active"
+        },
+
+        isPublic: {
+            type: Boolean,
+            default: true
         },
 
         rating: {

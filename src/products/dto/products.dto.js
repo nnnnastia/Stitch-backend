@@ -1,4 +1,4 @@
-export function toProductResponseDto(product) {
+export function toProductResponseDto(product, sellerProfile = null) {
     return {
         id: product._id,
         title: product.title,
@@ -20,6 +20,12 @@ export function toProductResponseDto(product) {
             ? {
                 id: product.seller._id,
                 userName: product.seller.userName,
+                displayName: sellerProfile?.displayName || "",
+                storeSlug: sellerProfile?.storeSlug || "",
+                rating: {
+                    avg: sellerProfile?.rating?.avg || 0,
+                    count: sellerProfile?.rating?.count || 0,
+                },
             }
             : null,
         status: product.status,
@@ -27,7 +33,6 @@ export function toProductResponseDto(product) {
         updatedAt: product.updatedAt,
     };
 }
-
 export function toProductsListResponseDto(products) {
-    return products.map(toProductResponseDto);
+    return products.map((product) => toProductResponseDto(product));
 }

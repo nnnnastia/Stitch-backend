@@ -1,33 +1,37 @@
 import SellerProfile from "./entities/sellerProfile.model.js";
 
-export async function findByUserId(userId) {
-    return SellerProfile.findOne({ user: userId });
-}
-
 export async function createSellerProfile(data) {
     return SellerProfile.create(data);
 }
 
-export async function updateByUserId(userId, updateData) {
+export async function findByUserId(userId) {
+    return SellerProfile.findOne({ user: userId }).populate("user", "userName userSurname email avatarUrl");
+}
+
+export async function updateByUserId(userId, patch) {
     return SellerProfile.findOneAndUpdate(
         { user: userId },
-        { $set: updateData },
+        { $set: patch },
         { new: true, runValidators: true }
-    );
+    ).populate("user", "userName userSurname email avatarUrl");
 }
-export async function createIfNotExists(userId) {
-    const existingProfile = await SellerProfile.findOne({ user: userId });
 
-    if (existingProfile) {
-        return existingProfile;
-    }
+export async function findPublicBySlug(slug) {
+    return SellerProfile.findOne({
+        storeSlug: slug,
+        status: "active",
+        isPublic: true
+    }).populate("user", "userName userSurname avatarUrl");
+}
 
-    return SellerProfile.create({
+export async function findPublicByUserId(userId) {
+    return SellerProfile.findOne({
         user: userId,
-        displayName: "",
-        about: "",
-        contacts: {},
-        delivery: {},
-        payment: {},
-    });
+        status: "active",
+        isPublic: true
+    }).populate("user", "userName userSurname avatarUrl");
+}
+
+export async function findBySlug(slug) {
+    return SellerProfile.findOne({ storeSlug: slug });
 }

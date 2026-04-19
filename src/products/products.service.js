@@ -5,7 +5,7 @@ import {
     toProductResponseDto,
     toProductsListResponseDto,
 } from "./dto/products.dto.js";
-
+import SellerProfile from "../sellerProfile/entities/sellerProfile.model.js";
 export async function getAllProducts(query) {
     const {
         badge,
@@ -107,5 +107,9 @@ export async function getProductById(productId) {
         throw error;
     }
 
-    return toProductResponseDto(product);
+    const sellerProfile = product.seller?._id
+        ? await SellerProfile.findOne({ user: product.seller._id })
+        : null;
+
+    return toProductResponseDto(product, sellerProfile);
 }
