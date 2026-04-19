@@ -20,17 +20,8 @@ export async function login(req, res, next) {
             ip: req.ip,
         });
 
-        res.cookie(
-            "accessToken",
-            result.accessToken,
-            getAccessCookieOptions()
-        );
-
-        res.cookie(
-            "refreshToken",
-            result.refreshToken,
-            getRefreshCookieOptions()
-        );
+        res.cookie("accessToken", result.accessToken, getAccessCookieOptions());
+        res.cookie("refreshToken", result.refreshToken, getRefreshCookieOptions());
 
         return res.status(200).json({
             user: result.user,
@@ -43,6 +34,7 @@ export async function login(req, res, next) {
 export async function verifyEmail(req, res, next) {
     try {
         const user = await authService.verifyEmail(req.query);
+
         return res.status(200).json({
             message: "Email verified successfully",
             user,
@@ -57,17 +49,8 @@ export async function refresh(req, res, next) {
         const refreshToken = req.cookies?.refreshToken;
         const result = await authService.refresh(refreshToken);
 
-        res.cookie(
-            "accessToken",
-            result.accessToken,
-            getAccessCookieOptions()
-        );
-
-        res.cookie(
-            "refreshToken",
-            result.refreshToken,
-            getRefreshCookieOptions()
-        );
+        res.cookie("accessToken", result.accessToken, getAccessCookieOptions());
+        res.cookie("refreshToken", result.refreshToken, getRefreshCookieOptions());
 
         return res.status(200).json({
             user: result.user,
@@ -79,7 +62,7 @@ export async function refresh(req, res, next) {
 
 export async function logout(req, res, next) {
     try {
-        const refreshToken = req.cookies?.["refreshToken"];
+        const refreshToken = req.cookies?.refreshToken;
 
         await authService.logout(refreshToken);
 
@@ -96,6 +79,24 @@ export async function logout(req, res, next) {
         return res.status(200).json({
             message: "Logged out successfully",
         });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function forgotPassword(req, res, next) {
+    try {
+        const result = await authService.forgotPassword(req.body);
+        return res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function resetPassword(req, res, next) {
+    try {
+        const result = await authService.resetPassword(req.body);
+        return res.status(200).json(result);
     } catch (error) {
         next(error);
     }

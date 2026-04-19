@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 
@@ -7,6 +7,13 @@ import * as tokenRepository from "./tokens/token.repository.js";
 import * as sellerProfilesRepository from "../sellerProfile/sellerProfiles.repository.js";
 import { toAuthUserDto } from "./dto/auth.dto.js";
 import { sendVerificationEmail } from "../mail/mail.service.js";
+import { sendResetPasswordEmail } from "../mail/sendResetPasswordEmail.js";
+
+const FORGOT_PASSWORD_RESPONSE = {
+    message:
+        "If an account with this email exists, password reset instructions have been sent.",
+};
+
 
 function createAccessToken(user) {
     return jwt.sign(
@@ -210,4 +217,66 @@ export async function logout(refreshToken) {
     }
 
     return { message: "Logged out successfully" };
+}
+
+export async function forgotPassword({ email }) {
+    if (!email) {
+        const error = new Error("Email is required");
+        error.status = 400;
+        throw error;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await authRepository.findByEmail(normalizedEmail);
+
+    if (!user) {
+        return FORGOT_PASSWORD_RESPONSE;
+    }
+
+    const { rawToken, tokenHash } = generateVerificationToken();
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 15);
+
+    await authRepository.saveResetPasswordToken(user, tokenHash, expiresAt);
+
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${rawToken}`;
+
+    await sendResetPasswordEmail({
+        to: user.email,
+        resetUrl,
+    });
+
+    return FORGOT_PASSWORD_RESPONSE;
+}
+
+export async function resetPassword({ token, newPassword, confirmPassword }) {
+    if (!token || !newPassword || !confirmPassword) {
+        const error = new Error("Token, newPassword and confirmPassword are required");
+        error.status = 400;
+        throw error;
+    }
+
+    if (newPassword !== confirmPassword) {
+        const error = new Error("Passwords do not match");
+        error.status = 400;
+        throw error;
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await authRepository.findUserByResetTokenHash(tokenHash);
+
+    if (!user) {
+        const error = new Error("Invalid or expired reset token");
+        error.status = 400;
+        throw error;
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+    await authRepository.updateUserPassword(user, newPasswordHash);
+    await tokenRepository.revokeAllUserSessions?.(user._id);
+
+    return {
+        message: "Password has been reset successfully",
+    };
 }

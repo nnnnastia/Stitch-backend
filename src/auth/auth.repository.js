@@ -35,3 +35,23 @@ export async function updateById(userId, updateData) {
 export async function findUserById(userId) {
     return User.findById(userId);
 }
+
+export async function findUserByResetTokenHash(tokenHash) {
+    return User.findOne({
+        resetPasswordTokenHash: tokenHash,
+        resetPasswordTokenExpires: { $gt: new Date() },
+    }).select("+passwordHash");
+}
+
+export async function saveResetPasswordToken(user, tokenHash, expiresAt) {
+    user.resetPasswordTokenHash = tokenHash;
+    user.resetPasswordTokenExpires = expiresAt;
+    return user.save();
+}
+
+export function updateUserPassword(user, passwordHash) {
+    user.passwordHash = passwordHash;
+    user.resetPasswordTokenHash = null;
+    user.resetPasswordTokenExpires = null;
+    return user.save();
+}

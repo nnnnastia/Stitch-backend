@@ -61,7 +61,14 @@ const userSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
-
+        resetPasswordTokenHash: {
+            type: String,
+            default: null,
+        },
+        resetPasswordTokenExpires: {
+            type: Date,
+            default: null,
+        },
         recentlyViewed: [
             {
                 product: {
