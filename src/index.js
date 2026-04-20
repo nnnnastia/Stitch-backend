@@ -35,6 +35,9 @@ import { ordersResolvers } from "./orders/orders.resolvers.js";
 import baseTypeDefs from "./graphql/base.typeDefs.js";
 import sellerOrdersRoutes from "./sellerOrders/sellerOrders.routes.js";
 import chatRoutes from "./chat/chat.routes.js";
+import reviewsRoutes from "./reviews/reviews.routes.js";
+
+
 
 const app = express();
 
@@ -79,6 +82,7 @@ app.use("/api/search", searchRoutes);
 app.use("/api/orders", ordersRoutes);
 app.use("/api/shipping", shippingRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/reviews", reviewsRoutes);
 
 const apolloServer = new ApolloServer({
     typeDefs: [baseTypeDefs, categoryTypeDefs, userTypeDefs, ordersTypeDefs],

@@ -5,8 +5,8 @@ export function toProductResponseDto(product, sellerProfile = null) {
         price: product.price,
         currency: product.currency,
         coverImage: product.coverImage,
-        images: product.images,
-        badges: product.badges,
+        images: product.images || [],
+        badges: product.badges || [],
         category: product.categoryId
             ? {
                 id: product.categoryId._id,
@@ -15,24 +15,28 @@ export function toProductResponseDto(product, sellerProfile = null) {
                 icon: product.categoryId.icon,
             }
             : null,
-        description: product.description,
+        description: product.description || "",
         seller: product.seller
             ? {
                 id: product.seller._id,
                 userName: product.seller.userName,
                 displayName: sellerProfile?.displayName || "",
                 storeSlug: sellerProfile?.storeSlug || "",
+                avatarUrl: sellerProfile?.avatarUrl || "",
                 rating: {
                     avg: sellerProfile?.rating?.avg || 0,
                     count: sellerProfile?.rating?.count || 0,
                 },
             }
             : null,
-        status: product.status,
+        viewsCount: product.viewsCount || 0,
+        ratingAverage: product.ratingAverage || 0,
+        ratingCount: product.ratingCount || 0,
         createdAt: product.createdAt,
         updatedAt: product.updatedAt,
     };
 }
+
 export function toProductsListResponseDto(products) {
     return products.map((product) => toProductResponseDto(product));
 }
