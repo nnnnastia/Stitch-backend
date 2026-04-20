@@ -103,7 +103,7 @@ const orderSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ["pending", "confirmed", "paid", "shipped", "completed", "cancelled"],
+            enum: ["pending", "confirmed", "shipped", "completed", "cancelled"],
             default: "pending",
             index: true,
         },
@@ -111,6 +111,25 @@ const orderSchema = new mongoose.Schema(
             type: String,
             enum: ["cod", "card"],
             required: true,
+        },
+        paymentStatus: {
+            type: String,
+            enum: ["pending", "paid", "failed"],
+            default: "pending",
+            index: true,
+        },
+        paymentProvider: {
+            type: String,
+            enum: ["stripe", null],
+            default: null,
+        },
+        paymentSessionId: {
+            type: String,
+            default: null,
+        },
+        paidAt: {
+            type: Date,
+            default: null,
         },
         delivery: {
             type: deliverySchema,

@@ -36,10 +36,18 @@ import baseTypeDefs from "./graphql/base.typeDefs.js";
 import sellerOrdersRoutes from "./sellerOrders/sellerOrders.routes.js";
 import chatRoutes from "./chat/chat.routes.js";
 import reviewsRoutes from "./reviews/reviews.routes.js";
+import paymentsRoutes from "./payments/payments.routes.js";
+import { stripeWebhook } from "./payments/payments.webhook.js";
 
 
 
 const app = express();
+
+app.post(
+    "/api/payments/webhook",
+    express.raw({ type: "application/json" }),
+    stripeWebhook
+);
 
 app.use(cors({
     origin: process.env.FRONTEND_URL,
@@ -83,6 +91,7 @@ app.use("/api/orders", ordersRoutes);
 app.use("/api/shipping", shippingRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/reviews", reviewsRoutes);
+app.use("/api/payments", paymentsRoutes);
 
 const apolloServer = new ApolloServer({
     typeDefs: [baseTypeDefs, categoryTypeDefs, userTypeDefs, ordersTypeDefs],
