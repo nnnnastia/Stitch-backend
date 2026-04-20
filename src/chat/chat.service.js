@@ -7,20 +7,94 @@ import {
     getConversationById,
     getUserConversations,
     updateConversationAfterMessage,
+    findConversationByOrder,
+    findAnyConversationBetweenUsers,
 } from "./chat.repository.js";
 import Conversation from "./entities/conversation.model.js";
 import Message from "./entities/message.model.js";
 import { uploadBufferToCloudinary } from "../utils/cloudinaryUpload.js";
+import Order from "../orders/entities/order.model.js";
 
 export async function createOrOpenConversationService(currentUserId, payload) {
-    const { sellerId, productId = null, sourceType } = payload;
+    const { sellerId, productId = null, orderId = null, sourceType } = payload;
+
+    if (!["product", "shop", "order"].includes(sourceType)) {
+        throw new Error("Invalid source type");
+    }
+
+    if (sourceType === "order") {
+        if (!orderId) {
+            throw new Error("Order id is required for order conversation");
+        }
+
+        const order = await Order.findById(orderId);
+        if (!order) {
+            throw new Error("Order not found");
+        }
+
+        const buyerId =
+            order.user ||
+            order.customer?._id ||
+            order.customer ||
+            null;
+
+        const sellerIds = [
+            order.seller,
+            ...(Array.isArray(order.items)
+                ? order.items.map((item) => item.seller).filter(Boolean)
+                : []),
+            ...(Array.isArray(order.sellerItems)
+                ? order.sellerItems.map((item) => item.seller).filter(Boolean)
+                : []),
+        ].filter(Boolean);
+
+        const isBuyer = buyerId && String(buyerId) === String(currentUserId);
+        const isSeller = sellerIds.some(
+            (id) => String(id) === String(currentUserId)
+        );
+
+        if (!isSeller && !isBuyer) {
+            throw new Error("Access denied");
+        }
+
+        if (!buyerId) {
+            throw new Error("Buyer not found for order");
+        }
+
+        let resolvedSellerId = null;
+
+        if (isSeller) {
+            resolvedSellerId = currentUserId;
+        } else {
+            resolvedSellerId = sellerIds[0] || null;
+        }
+
+        if (!resolvedSellerId) {
+            throw new Error("Seller not found for order");
+        }
+
+        const resolvedBuyerId = String(buyerId);
+        resolvedSellerId = String(resolvedSellerId);
+
+        let conversation = await findAnyConversationBetweenUsers({
+            buyerId: resolvedBuyerId,
+            sellerId: resolvedSellerId,
+        });
+
+        if (!conversation) {
+            conversation = await createConversation({
+                buyer: resolvedBuyerId,
+                seller: resolvedSellerId,
+                order: orderId,
+                sourceType: "order",
+            });
+        }
+
+        return getConversationById(conversation._id);
+    }
 
     if (!sellerId) {
         throw new Error("Seller id is required");
-    }
-
-    if (!["product", "shop"].includes(sourceType)) {
-        throw new Error("Invalid source type");
     }
 
     if (String(currentUserId) === String(sellerId)) {
@@ -51,17 +125,15 @@ export async function createOrOpenConversationService(currentUserId, payload) {
         }
     }
 
-    let conversation = await findConversationByParticipants({
-        buyerId: currentUserId,
-        sellerId,
-        productId: sourceType === "product" ? productId : null,
-        sourceType,
+    let conversation = await findAnyConversationBetweenUsers({
+        buyerId: String(currentUserId),
+        sellerId: String(sellerId),
     });
 
     if (!conversation) {
         conversation = await createConversation({
-            buyer: currentUserId,
-            seller: sellerId,
+            buyer: String(currentUserId),
+            seller: String(sellerId),
             product: sourceType === "product" ? productId : null,
             sourceType,
         });
@@ -94,6 +166,9 @@ export async function getConversationByIdService(currentUserId, conversationId) 
 
 export async function sendMessageService(currentUserId, conversationId, { text }, files = []) {
     const conversation = await Conversation.findById(conversationId);
+    if (conversation.sourceType === "system") {
+        throw new Error("Ви не можете відповідати на це повідомлення.");
+    }
 
     if (!conversation) {
         throw new Error("Conversation not found");
@@ -277,4 +352,41 @@ export async function getConversationMessagesService(currentUserId, conversation
         total,
         totalPages: Math.ceil(total / safeLimit),
     };
+}
+
+export async function createWelcomeConversationForUser(userId) {
+    const systemUser = await User.findOne({ email: "system@marketplace.local" });
+
+    if (!systemUser) {
+        throw new Error("System user not found");
+    }
+
+    let conversation = await Conversation.findOne({
+        buyer: userId,
+        seller: systemUser._id,
+        sourceType: "system",
+    });
+
+    if (!conversation) {
+        conversation = await Conversation.create({
+            buyer: userId,
+            seller: systemUser._id,
+            sourceType: "system",
+            buyerUnreadCount: 1,
+            sellerUnreadCount: 0,
+            lastMessageText: "Вітаємо на платформі!",
+            lastMessageAt: new Date(),
+            lastMessageSender: systemUser._id,
+        });
+
+        await Message.create({
+            conversation: conversation._id,
+            sender: systemUser._id,
+            text: "Вітаємо! Ваш акаунт успішно створено. Через чат ви можете спілкуватися з продавцями та покупцями, уточнювати деталі замовлень і отримувати важливі повідомлення. Ми бажаємо Вам гарного настрою та вдалих покупок!",
+            attachments: [],
+            isRead: false,
+        });
+    }
+
+    return conversation;
 }

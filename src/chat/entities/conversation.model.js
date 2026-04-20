@@ -22,10 +22,14 @@ const conversationSchema = new mongoose.Schema(
             default: null,
             index: true,
         },
-
+        order: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Order",
+            default: null,
+        },
         sourceType: {
             type: String,
-            enum: ["product", "shop"],
+            enum: ["shop", "product", "order", "system"],
             required: true,
         },
 

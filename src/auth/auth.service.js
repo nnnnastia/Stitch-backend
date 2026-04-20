@@ -9,7 +9,7 @@ import * as sellerProfilesRepository from "../sellerProfile/sellerProfiles.repos
 import { toAuthUserDto } from "./dto/auth.dto.js";
 import { sendVerificationEmail } from "../mail/mail.service.js";
 import { sendResetPasswordEmail } from "../mail/sendResetPasswordEmail.js";
-
+import { createWelcomeConversationForUser } from "../chat/chat.service.js";
 const FORGOT_PASSWORD_RESPONSE = {
     message:
         "If an account with this email exists, password reset instructions have been sent.",
@@ -84,6 +84,8 @@ export async function register(body) {
     if (normalizedRole === "seller") {
         await sellerProfilesRepository.createIfNotExists(user._id);
     }
+
+    await createWelcomeConversationForUser(user._id);
 
     const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${rawToken}`;
 
@@ -312,6 +314,7 @@ export async function loginWithGoogle(user, meta) {
         user: toAuthUserDto(user),
     };
 }
+
 export async function completeGoogleRegistration(body, meta) {
     const { token, role } = body;
 
@@ -353,6 +356,12 @@ export async function completeGoogleRegistration(body, meta) {
 
     if (normalizedRole === "seller") {
         await sellerProfilesRepository.createIfNotExists(user._id);
+    }
+
+    try {
+        await createWelcomeConversationForUser(user._id);
+    } catch (error) {
+        console.error("Failed to create welcome conversation for Google user:", error);
     }
 
     const accessToken = createAccessToken(user);
