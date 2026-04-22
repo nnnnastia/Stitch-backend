@@ -38,8 +38,7 @@ import chatRoutes from "./chat/chat.routes.js";
 import reviewsRoutes from "./reviews/reviews.routes.js";
 import paymentsRoutes from "./payments/payments.routes.js";
 import { stripeWebhook } from "./payments/payments.webhook.js";
-
-
+import wishlistRoutes from "./wishlist/wishlist.routes.js";
 
 const app = express();
 
@@ -92,6 +91,7 @@ app.use("/api/shipping", shippingRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/reviews", reviewsRoutes);
 app.use("/api/payments", paymentsRoutes);
+app.use("/api/wishlist", wishlistRoutes);
 
 const apolloServer = new ApolloServer({
     typeDefs: [baseTypeDefs, categoryTypeDefs, userTypeDefs, ordersTypeDefs],
