@@ -28,6 +28,7 @@ function validateCreateOrderPayload(paymentMethod, delivery) {
         "warehouseName",
         "recipientFullName",
         "recipientPhone",
+        "recipientEmail",
     ];
 
     for (const field of requiredFields) {
@@ -40,6 +41,15 @@ function validateCreateOrderPayload(paymentMethod, delivery) {
 
     if (delivery.provider !== "nova_poshta") {
         const error = new Error("Підтримується лише доставка Новою поштою");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const email = String(delivery.recipientEmail).trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email)) {
+        const error = new Error("Некоректний email отримувача");
         error.statusCode = 400;
         throw error;
     }

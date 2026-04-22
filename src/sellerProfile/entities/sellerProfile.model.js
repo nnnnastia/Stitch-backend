@@ -31,8 +31,18 @@ const sellerProfileSchema = new mongoose.Schema(
             default: "",
             trim: true
         },
+        avatarPublicId: {
+            type: String,
+            default: "",
+            trim: true
+        },
 
         bannerUrl: {
+            type: String,
+            default: "",
+            trim: true
+        },
+        bannerPublicId: {
             type: String,
             default: "",
             trim: true

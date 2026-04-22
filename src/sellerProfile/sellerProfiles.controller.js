@@ -53,3 +53,29 @@ export async function getPublicSellerProductsBySlug(req, res, next) {
         next(error);
     }
 }
+
+export async function uploadMySellerAvatar(req, res, next) {
+    try {
+        const profile = await sellerProfilesService.uploadMySellerAvatar(
+            req.user.id,
+            req.file
+        );
+
+        res.json({ profile });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function uploadMySellerBanner(req, res, next) {
+    try {
+        const profile = await sellerProfilesService.uploadMySellerBanner(
+            req.user.id,
+            req.file
+        );
+
+        res.json({ profile });
+    } catch (error) {
+        next(error);
+    }
+}

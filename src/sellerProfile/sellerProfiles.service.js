@@ -1,6 +1,7 @@
 import * as sellerProfilesRepository from "./sellerProfiles.repository.js";
 import { toPublicSellerProfileDto, toSellerProfileResponseDto } from "./dto/sellerProfiles.dto.js";
 import Product from "../products/entities/products.model.js";
+import { uploadBufferToCloudinary, deleteFromCloudinary } from "../utils/cloudinaryUpload.js";
 
 function normalizeSlug(value = "") {
     return String(value)
@@ -181,4 +182,72 @@ export async function getPublicSellerProductsBySlug(slug) {
         .populate("categoryId", "name slug icon");
 
     return products;
+}
+
+export async function uploadMySellerAvatar(userId, file) {
+    if (!file) {
+        const error = new Error("Avatar file is required");
+        error.status = 400;
+        throw error;
+    }
+
+    const profile = await sellerProfilesRepository.findByUserId(userId);
+
+    if (!profile) {
+        const error = new Error("Seller profile not found");
+        error.status = 404;
+        throw error;
+    }
+
+    const uploaded = await uploadBufferToCloudinary(file.buffer, {
+        folder: "seller-profiles/avatars",
+        transformation: [
+            { width: 400, height: 400, crop: "fill", gravity: "auto" }
+        ],
+    });
+
+    if (profile.avatarPublicId) {
+        await deleteFromCloudinary(profile.avatarPublicId);
+    }
+
+    const updated = await sellerProfilesRepository.updateByUserId(userId, {
+        avatarUrl: uploaded.secure_url,
+        avatarPublicId: uploaded.public_id,
+    });
+
+    return toSellerProfileResponseDto(updated);
+}
+
+export async function uploadMySellerBanner(userId, file) {
+    if (!file) {
+        const error = new Error("Banner file is required");
+        error.status = 400;
+        throw error;
+    }
+
+    const profile = await sellerProfilesRepository.findByUserId(userId);
+
+    if (!profile) {
+        const error = new Error("Seller profile not found");
+        error.status = 404;
+        throw error;
+    }
+
+    const uploaded = await uploadBufferToCloudinary(file.buffer, {
+        folder: "seller-profiles/banners",
+        transformation: [
+            { width: 1400, height: 500, crop: "fill", gravity: "auto" }
+        ],
+    });
+
+    if (profile.bannerPublicId) {
+        await deleteFromCloudinary(profile.bannerPublicId);
+    }
+
+    const updated = await sellerProfilesRepository.updateByUserId(userId, {
+        bannerUrl: uploaded.secure_url,
+        bannerPublicId: uploaded.public_id,
+    });
+
+    return toSellerProfileResponseDto(updated);
 }
