@@ -31,6 +31,10 @@ const deliverySchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        recipientEmail: {
+            type: String,
+            required: true,
+        },
         postalCode: {
             type: String,
             default: null,
