@@ -67,10 +67,12 @@ export async function logout(req, res, next) {
 
         await authService.logout(refreshToken);
 
+        const isProd = process.env.NODE_ENV === "production";
+
         const clearCookieOptions = {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
+            secure: isProd,
+            sameSite: isProd ? "none" : "lax",
             path: "/",
         };
 
