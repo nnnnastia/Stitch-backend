@@ -49,7 +49,10 @@ app.post(
 );
 
 app.use(cors({
-    origin: process.env.FRONTEND_URL,
+    origin: [
+        process.env.FRONTEND_URL,
+        "https://stitch-frontend-kappa.vercel.app",
+    ],
     credentials: true,
 }));
 
