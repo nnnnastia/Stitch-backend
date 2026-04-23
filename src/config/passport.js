@@ -8,13 +8,19 @@ const GOOGLE_CONFIG = {
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
 };
 
+const BACKEND_URL = process.env.BACKEND_URL;
+
+if (!BACKEND_URL) {
+    throw new Error("BACKEND_URL is not defined");
+}
+
 // login
 passport.use(
     "google-login",
     new GoogleStrategy(
         {
             ...GOOGLE_CONFIG,
-            callbackURL: "http://localhost:5000/api/auth/google/login/callback",
+            callbackURL: `${BACKEND_URL}/api/auth/google/login/callback`,
         },
         async (accessToken, refreshToken, profile, done) => {
             try {
@@ -47,7 +53,7 @@ passport.use(
     new GoogleStrategy(
         {
             ...GOOGLE_CONFIG,
-            callbackURL: "http://localhost:5000/api/auth/google/register/callback",
+            callbackURL: `${BACKEND_URL}/api/auth/google/register/callback`,
         },
         async (accessToken, refreshToken, profile, done) => {
             try {

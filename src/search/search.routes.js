@@ -8,7 +8,7 @@ import Product from "../products/entities/products.model.js";
 const router = express.Router();
 const upload = multer({ dest: "tmp/" });
 
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:8001";
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL;
 
 router.post("/by-photo", upload.single("file"), async (req, res, next) => {
     try {
