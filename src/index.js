@@ -139,6 +139,10 @@ async function start() {
         })
     );
 
+    app.get("/", (req, res) => {
+        res.json({ message: "API is running" });
+    });
+
     // 404 handler
     app.use((req, res) => {
         res.status(404).json({
