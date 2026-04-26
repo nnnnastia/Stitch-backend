@@ -25,14 +25,25 @@ router.post("/by-photo", upload.single("file"), async (req, res, next) => {
             headers: form.getHeaders(),
         });
 
-        const mlData = await mlResponse.json();
+        const contentType = mlResponse.headers.get("content-type") || "";
+
+        const mlData = contentType.includes("application/json")
+            ? await mlResponse.json().catch(() => null)
+            : null;
+
+        const mlText = !mlData
+            ? await mlResponse.text().catch(() => "")
+            : "";
 
         if (!mlResponse.ok) {
-            return res.status(500).json({
-                message: mlData.detail || "Помилка ML сервісу"
+            return res.status(mlResponse.status).json({
+                message:
+                    mlData?.detail ||
+                    mlData?.message ||
+                    mlText ||
+                    "Помилка ML сервісу",
             });
         }
-
         const productIds = mlData.results.map(item => item.productId);
 
         const products = await Product.find({
